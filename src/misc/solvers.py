@@ -15,6 +15,11 @@ def get_R(L, deltaY):
 
     else: return 0
 
+def get_dir(atoms, rend_b, rend_t):
+    
+    vec     =   atoms.positions[rend_t,:][0] - atoms.positions[rend_b,:][0]
+    vec[2]  =   0.
+    return vec/np.linalg.norm(vec)
 
 def int_toAngst(thatInt, edge, key = 'width', C_C = 1.42):
     

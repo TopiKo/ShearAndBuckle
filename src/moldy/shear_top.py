@@ -6,79 +6,64 @@ Created on 12.8.2015
 
 import numpy as np
 from potentials.LJ_smooth import LJ_potential_smooth
-from misc.solvers import get_R
+from misc.solvers import get_R, get_dir
+from misc.ui import write_line_own, make_simul_param_file, read_simul_params_file
+from misc.lammps_help import get_lammps_params, get_simulParams
 from filenames import get_fileName
 from write_structure import saveAndPrint
-from structure import create_stucture, get_posInds
+from structure import create_stucture, get_posInds, get_constraints
 from ase.calculators.lammpsrun import LAMMPS
 from ase.visualize import view
-from ase.constraints import FixedPlane, FixedLine, FixAtoms
 from ase.io.trajectory import PickleTrajectory
 from ase.md.langevin import Langevin
 from ase.optimize import BFGS
 from ase.md.velocitydistribution import MaxwellBoltzmannDistribution as mbd
 from ase import units
+import sys
+
+width, edge, rmin, rmax =  int(sys.argv[1]), sys.argv[2], int(sys.argv[3]), int(sys.argv[4])
 
 
-M           =   20000
-bond        =   1.39695
-h           =   3.3705 
-ncores      =   2   
-T           =   10 #K
-dt, fric    =   2, 0.002
-v           =   .001 #Angst/fs
+taito       =   False
+
+T, dt, fric, thres_Z, v, bond, h =   get_simulParams(edge)
+
+#bond        =   1.39695
+#h           =   3.3705 
+#ncores      =   2   
+#T           =   10 #K
+#dt, fric    =   2, 0.002
+#v           =   .001 #Angst/fs
+
 # v has to be such that the elastic wave resulting from the bend 
 # can travel the ribbon length twice from end to end before 'too'
 # large deformations occur. If bend that is 5%of the length of the
 # ribbon is not too large .001Angst/fs bending velocity should be
-# slow enough.
+# slow enough. Sound speend for in-plane waves in graphen > 10km/s 
+# = .1Angst/fs.
 tau         =   10./fric/5
-thres_Z     =   4.
+#thres_Z     =   4.
 
-def shearDyn(width, ratio, edge, save = False):
+def shearDyn(width, ratio, edge, save = False, force_dir_update = True):
     
     atoms, L, W, length_int  =   create_stucture(ratio, width, edge, key = 'top')
     
     # FIXES
-    constraints     =   []
-    if edge == 'zz':    fixL    =   np.sqrt(3) * bond * 2.05
-    if edge == 'ac':    fixL    =   5 * bond
-
-    rend_b          =   get_posInds(atoms, 'redge')[1]
-    lend_s, lend_h  =   get_posInds(atoms, 'ledge', fixL)
-    
-    #view(atoms)
-    for i in rend_b:
-        constraints.append(FixedPlane(i, (0,1,0)))
-    
-    for i in lend_s:
-        constraints.append(FixedLine(i, (0,0,1)))
-        
-    constraints.append(FixAtoms(indices = lend_h))
-    
-    # KC
-    add_LJ          =   LJ_potential_smooth(bond)
-    constraints.append(add_LJ)
+    constraints, add_LJ, rend_b, rend_t     =   get_constraints(atoms, edge, bond)
     # END FIXES
     
     
-    
     # CALCULATOR LAMMPS 
-    parameters = {'pair_style':'rebo',
-                  'pair_coeff':['* * CH.airebo C H'],
-                  'mass'      :['1 12.0', '2 1.0'],
-                  'units'     :'metal', 
-                  'boundary'  :'f f f'}
-    
-    calc    =   LAMMPS(parameters=parameters) 
+    calc    =   LAMMPS(parameters=get_lammps_params()) 
     atoms.set_calculator(calc)
     # END CALCULATOR
     
     
     # TRAJECTORY
-    mdfile, mdlogfile, mdrelax  =   get_fileName('LJ', edge, width, \
-                                                 length_int, \
-                                                 taito = False)
+    add =   ''
+    if force_dir_update:    add =   '_ff'
+    mdfile, mdlogfile, mdrelax, simulfile   =   get_fileName('LJ', edge + add, width, \
+                                                 length_int, int(T), taito)
     
     if save:    traj    =   PickleTrajectory(mdfile, 'w', atoms)
     else:       traj    =   None
@@ -111,19 +96,24 @@ def shearDyn(width, ratio, edge, save = False):
     dy          =   v * dt
     M           =   deltaYMax / dy
     interval    =   int(M / 1000)
-    info_line   =   '# width = %.4f [Angstrom], length = %.4f [Angstrom], vel = %.6f [Angstrom/fs]\n' \
-                    %(W, L, dy/dt)
-    write_line_own(mdlogfile, info_line, 'a')
+    
+    #info_line1  =   '#il1 width = %.4f [Angstrom], length = %.4f [Angstrom], Lint = %i, vel = %.6f [Angstrom/fs]\n' \
+    #                %(W, L, length_int, dy/dt)
+    #info_line2  =   '#il2 T = %.4f [K], dt = %.4f [fs], fric = %.6f [1/fs], thresZ = %.6f [Angstrom], interval = %i \n' \
+    #                %(T, dt, fric, thres_Z, interval)
+    #write_line_own(mdlogfile, info_line1, 'a')
+    #write_line_own(mdlogfile, info_line2, 'a')
 
     kink_formed =   False
+    dir_vec     =   np.array([0.,1.,0.])
     i,m         =   0, 0
     print 'width = %i, length = %i' %(width, length_int)
-    while m <= int(M / 50):
+    while m <= int(M / 30):
         
         if tau < i*dt:
-            deltaY  +=  dy
+            deltaY  +=  dy*dir_vec[1]
             for ind in rend_b:
-                atoms[ind].position[1] += dy 
+                atoms[ind].position[:] += dy*dir_vec 
             
             
         dyn.run(1)
@@ -133,8 +123,7 @@ def shearDyn(width, ratio, edge, save = False):
             epot, ekin  =   saveAndPrint(atoms, traj, False)[:2]
             
             R           =   get_R(L, deltaY)
-            
-                
+            if force_dir_update:    dir_vec = get_dir(atoms, rend_b, rend_t)
             data        =   [i*dt, deltaY, R, epot, ekin, epot + ekin]
             
             if save:
@@ -152,7 +141,8 @@ def shearDyn(width, ratio, edge, save = False):
             n += 1
             
             if thres_Z  <   np.max(atoms.positions[:,2]) and m == 0:
-                write_line_own(mdlogfile, '# Kink! ' +  '\n', 'a')
+                idxs    =   np.where(thres_Z < atoms.positions[:,2])
+                write_line_own(mdlogfile, '# Kink! at idxs %s' %str(idxs) +  '\n', 'a')
                 print ' kink formed! '
                 kink_formed     =   True
                 
@@ -165,12 +155,11 @@ def shearDyn(width, ratio, edge, save = False):
         if kink_formed:     m   +=  1
         i       +=  1
 
-def write_line_own(wfile, line, key):
-    log_f       =   open(wfile, key)
-    log_f.write(line)            
-    log_f.close()
     
+    make_simul_param_file(simulfile, W, L, width, length_int, v, dy, T, \
+                          dt, fric, thres_Z, interval, deltaY, M, edge)
     
-for rat in range(10,20):
-    shearDyn(8, rat, 'zz', True)
+
+for rat in range(rmin, rmax):
+    shearDyn(width, rat, edge, True, True)
     #shearDyn(7, rat, 'ac', True)

@@ -36,3 +36,74 @@ def query_yes_no(question, default="yes"):
         else:
             sys.stdout.write("Please respond with 'yes' or 'no' "\
                              "(or 'y' or 'n').\n")
+
+
+def write_line_own(wfile, line, key):
+    log_f       =   open(wfile, key)
+    log_f.write(line)            
+    log_f.close()
+    
+def make_simul_param_file(fname, W, L, width, length_int, v, dy, T, \
+                          dt, fric, thres_Z, interval, deltaY, M, edge):
+
+    log_f       =   open(fname, 'w')
+    log_f.write('This is the params file. \n')
+    
+    log_f.write('width = %.6f [A] \n' %W)
+    log_f.write('length = %.6f [A] \n' %L)
+    log_f.write('width_i = %i \n' %width)
+    log_f.write('length_i = %i \n' %length_int)
+    log_f.write('Vel = %.6f [A/fs] \n' %v)
+    log_f.write('Temp = %.1f [K] \n' %T)
+    log_f.write('dt = %.4f [fs] \n' %dt)
+    log_f.write('fric = %.4f \n' %fric)
+    log_f.write('dy = %.6f [A] \n' %dy)
+    log_f.write('thres_Z = %.4f [A] \n' %thres_Z)
+    log_f.write('interval = %i \n' %interval)
+    log_f.write('deltaY = %.6f [A] \n' %deltaY)
+    log_f.write('M = %i \n' %M)
+    log_f.write('edge = %s \n' %edge)
+    
+    log_f.close()
+    
+def read_simul_params_file(fname):
+    
+    log_f =   open(fname, 'r')
+    lines = log_f.readlines()
+    
+    width   =   find_between( lines[1],  ' = ', ' ' )
+    length  =   find_between( lines[2],  ' = ', ' ' )
+    width_i =   find_between( lines[3],  ' = ', ' ' )
+    length_i=   find_between( lines[4],  ' = ', ' ' )
+    vel     =   find_between( lines[5],  ' = ', ' ' )
+    
+    
+    temp    =   find_between( lines[6],  ' = ', ' ' )
+    dt      =   find_between( lines[7],  ' = ', ' ' )
+    fric    =   find_between( lines[8],  ' = ', ' ' )
+    dy      =   find_between( lines[9],  ' = ', ' ' )
+    thresZ  =   find_between( lines[10], ' = ', ' ' )
+    interval=   find_between( lines[11], ' = ', ' ' )
+    deltaY  =   find_between( lines[12], ' = ', ' ' )
+    M       =   find_between( lines[13], ' = ', ' ' )
+    edge    =   find_between( lines[14], ' = ', ' ' )
+    
+    #width, length, width_i, length_i, v, T, dt, fric, dy, \
+    #        thresZ, interval, deltaY, M, edge
+    
+    return float(width), float(length), int(width_i), int(length_i), float(vel), \
+           float(temp), float(dt), float(fric), float(dy), \
+            float(thresZ), int(interval), float(deltaY), int(M), edge
+    
+    
+    
+def find_between( s, first, last ):
+    try:
+        start = s.index( first ) + len( first )
+        end = s.index( last, start )
+        return s[start:end]
+    except ValueError:
+        return ""
+     
+    
+    

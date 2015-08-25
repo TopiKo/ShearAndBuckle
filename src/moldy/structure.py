@@ -6,6 +6,8 @@ Created on 13.8.2015
 
 from ase import Atoms, Atom
 from ase.visualize import view
+from ase.constraints import FixedPlane, FixedLine, FixAtoms
+from potentials.LJ_smooth import LJ_potential_smooth
 import numpy as np
 
 def create_stucture(ratio, width, edge, key = 'top', a = 1.42):
@@ -15,6 +17,8 @@ def create_stucture(ratio, width, edge, key = 'top', a = 1.42):
     length_b=   int(length * .8)*2
     width_b =   width * 4
     
+    
+    print length, width
     
     if edge == 'zz':    
         orig    =   [np.sqrt(3)*a, 2*a] # -> AB-stacking
@@ -158,6 +162,7 @@ def graphene_nanoribbon2(length, width, edge_type='zz', saturated=False, C_H=1.0
         
     if edge_type == 'ac':
         return slab(length, width)
+    
     elif edge_type == 'zz':
         
         atoms       =   slab(width / 2 + width % 2, length)
@@ -198,7 +203,7 @@ def get_length(ratio, width, edge):
         else: return length
     
     elif edge == 'ac':
-        length  =   int(ratio * np.sqrt(3) * (width - 1) / 6. + 1./3 )
+        length  =   int(ratio * np.sqrt(3) * (width - 1) / 3. + 2./3 )
         return length
 
 def get_topInds(atoms):
@@ -244,7 +249,16 @@ def get_posInds(atoms, key = 'redge', *args):
 
         if len(redge_bot) != 1: raise
         
-        return redge, redge_bot
+        redge_top   =   []
+        for i in redge:
+            if np.max(atoms.positions[redge, 1]) - .1 < atoms.positions[i,1]:
+                redge_top.append(i)
+
+        if len(redge_top) != 1: raise
+
+
+        
+        return redge, redge_bot, redge_top
     
     if key == 'ledge':
         xmin    =   10000
@@ -262,6 +276,33 @@ def get_posInds(atoms, key = 'redge', *args):
 
             
         return ledge_s, ledge_h
+    
+
+def get_constraints(atoms, edge, bond):
+    
+    # FIXES
+    constraints     =   []
+    if edge == 'zz':    fixL    =   np.sqrt(3) * bond * 2.05
+    if edge == 'ac':    fixL    =   5 * bond
+
+    rend_b, rend_t  =   get_posInds(atoms, 'redge')[1:]
+    lend_s, lend_h  =   get_posInds(atoms, 'ledge', fixL)
+    
+    #view(atoms)
+    for i in rend_b:
+        constraints.append(FixedPlane(i, (0,1,0)))
+    
+    for i in lend_s:
+        constraints.append(FixedLine(i, (0,0,1)))
+        
+    constraints.append(FixAtoms(indices = lend_h))
+    
+    # KC
+    add_LJ          =   LJ_potential_smooth(bond)
+    constraints.append(add_LJ)
+    # END FIXES
+    
+    return constraints, add_LJ, rend_b, rend_t
     
     
     

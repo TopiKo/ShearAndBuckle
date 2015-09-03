@@ -44,7 +44,7 @@ def write_line_own(wfile, line, key):
     log_f.close()
     
 def make_simul_param_file(fname, W, L, width, length_int, v, dy, T, \
-                          dt, fric, thres_Z, interval, deltaY, M, edge):
+                          dt, fric, thres_Z, interval, deltaY, theta, M, edge):
 
     log_f       =   open(fname, 'w')
     log_f.write('This is the params file. \n')
@@ -61,6 +61,7 @@ def make_simul_param_file(fname, W, L, width, length_int, v, dy, T, \
     log_f.write('thres_Z = %.4f [A] \n' %thres_Z)
     log_f.write('interval = %i \n' %interval)
     log_f.write('deltaY = %.6f [A] \n' %deltaY)
+    log_f.write('theta = %.6f [A] \n' %theta)
     log_f.write('M = %i \n' %M)
     log_f.write('edge = %s \n' %edge)
     
@@ -85,15 +86,16 @@ def read_simul_params_file(fname):
     thresZ  =   find_between( lines[10], ' = ', ' ' )
     interval=   find_between( lines[11], ' = ', ' ' )
     deltaY  =   find_between( lines[12], ' = ', ' ' )
-    M       =   find_between( lines[13], ' = ', ' ' )
-    edge    =   find_between( lines[14], ' = ', ' ' )
+    theta   =   find_between( lines[13], ' = ', ' ' )
+    M       =   find_between( lines[14], ' = ', ' ' )
+    edge    =   find_between( lines[15], ' = ', ' ' )
     
     #width, length, width_i, length_i, v, T, dt, fric, dy, \
     #        thresZ, interval, deltaY, M, edge
     
     return float(width), float(length), int(width_i), int(length_i), float(vel), \
            float(temp), float(dt), float(fric), float(dy), \
-            float(thresZ), int(interval), float(deltaY), int(M), edge
+            float(thresZ), int(interval), float(deltaY), float(theta), int(M), edge
     
     
     
@@ -104,6 +106,24 @@ def find_between( s, first, last ):
         return s[start:end]
     except ValueError:
         return ""
-     
+
+def append_files(file1, file2, fname):
     
+    fnew=   open(fname, 'w')
+    f1  =   open(file1, 'r')
+    f2  =   open(file2, 'r')
+    
+    lines = f1.readlines()
+    for i in range(0, len(lines)):
+        line = lines[i]
+        fnew.write(line)
+    
+    lines = f2.readlines()
+    for i in range(0, len(lines)):
+        line = lines[i]
+        fnew.write(line)
+    
+    fnew.close()
+    f1.close()
+    f2.close()
     

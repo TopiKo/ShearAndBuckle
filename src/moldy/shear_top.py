@@ -21,10 +21,12 @@ from ase.md.velocitydistribution import MaxwellBoltzmannDistribution as mbd
 from ase import units
 import sys
 
-width, edge, rmin, rmax =  int(sys.argv[1]), sys.argv[2], int(sys.argv[3]), int(sys.argv[4])
+#width, edge, rmin, rmax =  int(sys.argv[1]), sys.argv[2], int(sys.argv[3]), int(sys.argv[4])
 
 
 taito       =   False
+width, edge, rmin, rmax =   7, 'ac', 5, 6
+
 
 T, dt, fric, thres_Z, v, bond, h =   get_simulParams(edge)
 
@@ -35,21 +37,17 @@ T, dt, fric, thres_Z, v, bond, h =   get_simulParams(edge)
 #dt, fric    =   2, 0.002
 #v           =   .001 #Angst/fs
 
-# v has to be such that the elastic wave resulting from the bend 
-# can travel the ribbon length twice from end to end before 'too'
-# large deformations occur. If bend that is 5%of the length of the
-# ribbon is not too large .001Angst/fs bending velocity should be
-# slow enough. Sound speend for in-plane waves in graphen > 10km/s 
-# = .1Angst/fs.
+
 tau         =   10./fric/5
 #thres_Z     =   4.
 
 def shearDyn(width, ratio, edge, save = False, force_dir_update = True):
     
-    atoms, L, W, length_int  =   create_stucture(ratio, width, edge, key = 'top')
+    atoms, L, W, length_int, b_idxs     =   create_stucture(ratio, width, edge, key = 'rib+base')
     
+    view(atoms)
     # FIXES
-    constraints, add_LJ, rend_b, rend_t     =   get_constraints(atoms, edge, bond)
+    constraints, add_LJ, rend_b, rend_t     =   get_constraints(atoms, edge, bond, b_idxs)
     # END FIXES
     
     
@@ -92,18 +90,12 @@ def shearDyn(width, ratio, edge, save = False, force_dir_update = True):
     eta         =   1.1 # ratio between the lengths of the streched and compressed side of the ribbon.
     r           =   L / W # length to width ratio.
     deltaYMax   =   W / 2. * (eta + 1)/(eta - 1) * (1 - np.cos(2 * r * (eta - 1) / (eta + 1))) 
+    
     # Estimate for the required shift
     dy          =   v * dt
     M           =   deltaYMax / dy
     interval    =   int(M / 1000)
     
-    #info_line1  =   '#il1 width = %.4f [Angstrom], length = %.4f [Angstrom], Lint = %i, vel = %.6f [Angstrom/fs]\n' \
-    #                %(W, L, length_int, dy/dt)
-    #info_line2  =   '#il2 T = %.4f [K], dt = %.4f [fs], fric = %.6f [1/fs], thresZ = %.6f [Angstrom], interval = %i \n' \
-    #                %(T, dt, fric, thres_Z, interval)
-    #write_line_own(mdlogfile, info_line1, 'a')
-    #write_line_own(mdlogfile, info_line2, 'a')
-
     kink_formed =   False
     dir_vec     =   np.array([0.,1.,0.])
     i,m         =   0, 0

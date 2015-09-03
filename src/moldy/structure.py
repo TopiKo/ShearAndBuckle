@@ -7,7 +7,10 @@ Created on 13.8.2015
 from ase import Atoms, Atom
 from ase.visualize import view
 from ase.constraints import FixedPlane, FixedLine, FixAtoms
+from ase.calculators.neighborlist import NeighborList
 from potentials.LJ_smooth import LJ_potential_smooth
+from potentials.twist_const import twist_const_F, twistConst_Rod
+
 import numpy as np
 
 def create_stucture(ratio, width, edge, key = 'top', a = 1.42):
@@ -17,13 +20,14 @@ def create_stucture(ratio, width, edge, key = 'top', a = 1.42):
     length_b=   int(length * .8)*2
     width_b =   width * 4
     
-    
-    print length, width
-    
     if edge == 'zz':    
         orig    =   [np.sqrt(3)*a, 2*a] # -> AB-stacking
+        b_l, b_w=   4, 3*width
+        if width % 2 == 1: raise
     if edge == 'ac':    
         orig    =   [2*a, np.sqrt(3)*a] # -> AB-stacking
+        b_l, b_w=   2, 3*width 
+        if width % 2 == 0: raise        
     
     bottom  =   graphene_nanoribbon2(length_b, width_b, edge_type=edge, 
                                     saturated=False, 
@@ -35,6 +39,15 @@ def create_stucture(ratio, width, edge, key = 'top', a = 1.42):
                                     saturate_element='H')
     
     top     =   graphene_nanoribbon2(length, width, edge_type=edge, 
+                                    saturated=True, 
+                                    C_H=1.09,
+                                    C_C=1.42, 
+                                    vacuum=2.5, 
+                                    sheet=False, 
+                                    main_element='C', 
+                                    saturate_element='H')
+    
+    base    =   graphene_nanoribbon2(b_l, b_w, edge_type=edge, 
                                     saturated=True, 
                                     C_H=1.09,
                                     C_C=1.42, 
@@ -57,11 +70,87 @@ def create_stucture(ratio, width, edge, key = 'top', a = 1.42):
     if key == 'top':
         atoms       =   top
         L, W        =   top.cell[0,0], top.cell[1,1] 
-        atoms.cell  =   [top.cell[0,0]*1.5, top.cell[0,0] + 2*top.cell[1,1], 2 * vacuum]
+        atoms.cell  =   [top.cell[0,0]*1.5, 2*top.cell[0,0] + top.cell[1,1], 2 * vacuum]
         atoms.center()
         atoms.positions[:,2] = 3.4
         atoms.pbc   =   [False, False, False]
-        return atoms, L, W, length
+        return atoms, L, W, length, None
+    
+    if key == 'rib+base':
+
+        if edge == 'zz':    base.translate([-base.cell[0,0], -base.cell[1,1]/3 ,0])
+        if edge == 'ac':    base.translate([-base.cell[0,0], -base.cell[1,1]/3 + np.sqrt(3) / 2. * a,0])
+
+        atoms       =   top + base
+        
+        rads    =   np.ones(len(atoms))*.3
+        nl = NeighborList(rads, self_interaction=False,
+                 bothways=True)
+        nl.update(atoms)
+        
+        coll        =   []
+        for i, atom in enumerate(atoms):
+            if atom.number == 1:
+                if 1 < len(nl.get_neighbors(i)[0]):
+                    for j in nl.get_neighbors(i)[0]:
+                        if atoms.numbers[j] == 1:
+                            coll.append(j)
+        del atoms[coll]
+
+        atoms_base  =   []
+        for i, atom in enumerate(atoms):
+            if atom.position[0] < 0:
+                atoms_base.append(i)
+                
+        rads    =   np.ones(len(atoms))*.7
+        nl = NeighborList(rads, self_interaction=False,
+                 bothways=True)
+        nl.update(atoms)
+
+        
+        new_pos =   []
+        for i, atom in enumerate(atoms):
+            if len(nl.get_neighbors(i)[0]) == 2 and atom.number == 6 and i not in atoms_base:
+                pos =   np.zeros(3)
+                for j in nl.get_neighbors(i)[0]:
+                    pos +=  atoms.positions[j] - atoms.positions[i] 
+                    if atoms.numbers[j] != 6: raise
+                new_pos.append(atoms.positions[i] - pos)
+        
+        for pos in new_pos:
+            atoms   +=  Atom('C', position = pos)
+        
+        rads    =   np.ones(len(atoms))*.7
+        nl = NeighborList(rads, self_interaction=False,
+                 bothways=True)
+        nl.update(atoms)
+        
+        h_pos =   []
+        for i, atom in enumerate(atoms):
+            if len(nl.get_neighbors(i)[0]) == 2 and atom.number == 6:
+                pos =   np.zeros(3)
+                for j in nl.get_neighbors(i)[0]:
+                    pos +=  atoms.positions[j] - atoms.positions[i] 
+                    if atoms.numbers[j] != 6: raise
+                pos =   pos/np.linalg.norm(pos)
+                
+                h_pos.append(atoms.positions[i] - pos)
+        
+        for pos in h_pos:
+            atoms   +=  Atom('H', position = pos)
+        
+        
+        
+        L, W        =   top.cell[0,0], top.cell[1,1] 
+        
+        
+        
+        atoms.cell  =   [top.cell[0,0]*1.5, 2*top.cell[0,0] + top.cell[1,1], 2 * vacuum]
+        atoms.center()
+        atoms.positions[:,2] = 3.4
+        atoms.pbc   =   [False, False, False]
+        return atoms, L, W, length, atoms_base
+
 
 
 def graphene_nanoribbon2(length, width, edge_type='zz', saturated=False, C_H=1.09,
@@ -278,31 +367,105 @@ def get_posInds(atoms, key = 'redge', *args):
         return ledge_s, ledge_h
     
 
-def get_constraints(atoms, edge, bond):
+def get_constraints(atoms, edge, bond, idxs, key = 'shear'):
     
-    # FIXES
-    constraints     =   []
-    if edge == 'zz':    fixL    =   np.sqrt(3) * bond * 2.05
-    if edge == 'ac':    fixL    =   5 * bond
-
-    rend_b, rend_t  =   get_posInds(atoms, 'redge')[1:]
-    lend_s, lend_h  =   get_posInds(atoms, 'ledge', fixL)
+    if key == 'shear':
+        # FIXES
+        constraints     =   []
+        if edge == 'zz':    fixL    =   np.sqrt(3) * bond * .51 #1.05
+        if edge == 'ac':    fixL    =   1.01 * bond
     
-    #view(atoms)
-    for i in rend_b:
-        constraints.append(FixedPlane(i, (0,1,0)))
-    
-    for i in lend_s:
-        constraints.append(FixedLine(i, (0,0,1)))
+        rend_b, rend_t  =   get_posInds(atoms, 'redge')[1:]
+        lend_s, lend_h  =   get_posInds(atoms, 'ledge', fixL)
         
-    constraints.append(FixAtoms(indices = lend_h))
+        #view(atoms)
+        if idxs == None:
+            for i in lend_s:
+                constraints.append(FixedLine(i, (0,0,1)))
+            constraints.append(FixAtoms(indices = lend_h))
+        else:
+            for i in idxs:
+                constraints.append(FixedLine(i, (0,0,1)))
+          
+        for i in rend_b:
+            constraints.append(FixedPlane(i, (0,1,0)))
+        
+        
+        # KC
+        add_LJ          =   LJ_potential_smooth(bond)
+        constraints.append(add_LJ)
+        # END FIXES
+        
+        return constraints, add_LJ, rend_b, rend_t
     
-    # KC
-    add_LJ          =   LJ_potential_smooth(bond)
-    constraints.append(add_LJ)
-    # END FIXES
+    elif key == 'twist_F':
+        
+        # FIXES
+        constraints     =   []
+        if edge == 'zz':    fixL    =   np.sqrt(3) * bond * 2.05
+        if edge == 'ac':    fixL    =   5 * bond
     
-    return constraints, add_LJ, rend_b, rend_t
+        rend_b, rend_t  =   get_posInds(atoms, 'redge')[1:]
+        lend_s, lend_h  =   get_posInds(atoms, 'ledge', fixL)
+        
+        #view(atoms)
+        if idxs == None:
+            for i in lend_s:
+                constraints.append(FixedLine(i, (0,0,1)))
+            constraints.append(FixAtoms(indices = lend_h))
+        else:
+            for i in idxs:
+                constraints.append(FixedLine(i, (0,0,1)))
+          
+        # KC
+        add_LJ          =   LJ_potential_smooth(bond)
+        if len(rend_b) != len(rend_t) != 1: raise
+        twist           =   twist_const_F(rend_b[0], rend_t[0], np.zeros(3))
+        
+        constraints.append(FixedPlane(rend_b[0], (0,0,1)))
+        constraints.append(FixedPlane(rend_t[0], (0,0,1)))
+        
+        
+        constraints.append(add_LJ)
+        constraints.append(twist)
+        # END FIXES
+        
+        return constraints, add_LJ, twist, rend_b, rend_t
     
+    elif key == 'twist_p':
+        
+        # FIXES
+        constraints     =   []
+        if edge == 'zz':    fixL    =   np.sqrt(3) * bond * .51
+        if edge == 'ac':    fixL    =   1.1 * bond
     
+        rend_b, rend_t  =   get_posInds(atoms, 'redge')[1:]
+        lend_s, lend_h  =   get_posInds(atoms, 'ledge', fixL)
+        
+        #view(atoms)
+        if idxs == None:
+            for i in lend_s:
+                constraints.append(FixedLine(i, (0,0,1)))
+            constraints.append(FixAtoms(indices = lend_h))
+        else:
+            for i in idxs:
+                constraints.append(FixedLine(i, (0,0,1)))
+          
+        # KC
+        add_LJ          =   LJ_potential_smooth(bond)
+        if len(rend_b) != len(rend_t) != 1: raise
+        
+        #dist            =   np.linalg.norm(atoms.positions[rend_b[0]] - atoms.positions[rend_t[0]])
+        #twist           =   twistConst_Rod(rend_b[0], rend_t[0], dist)
+        twist          =   twistConst_Rod(atoms, 4, edge, bond)
+        
+        constraints.append(FixedPlane(rend_b[0], (0,0,1)))
+        
+        
+        constraints.append(add_LJ)
+        constraints.append(twist)
+        # END FIXES
+        
+        return constraints, add_LJ, twist, rend_b[0], rend_t[0]
+        
     

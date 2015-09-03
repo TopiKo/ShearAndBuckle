@@ -5,7 +5,7 @@ Created on 17.8.2015
 '''
 
 from misc.ui import query_yes_no, read_simul_params_file
-import numpy as np
+#import numpy as np
 import os
 
 def get_datas(ia, edge, btaito = True):

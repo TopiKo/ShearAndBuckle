@@ -44,6 +44,9 @@ atoms       =   Atoms('C', positions = [[0.,0.,3.4]])
 atoms.cell  =   (5,5,10)
 add_LJ      =   LJ_potential_smooth(1.39695)
 n           =   1000
+
+print -6. / 5. * np.pi * add_LJ.cPerA * add_LJ.ecc * add_LJ.sigmacc**2  
+
 # CALCULATOR LAMMPS 
 parameters = {'pair_style':'rebo',
               'pair_coeff':['* * CH.airebo C'],

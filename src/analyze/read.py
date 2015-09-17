@@ -8,12 +8,10 @@ from misc.ui import query_yes_no, read_simul_params_file
 #import numpy as np
 import os
 
-def get_datas(ia, edge, btaito = True):
+def get_datas(ia, T, key):
     
-    if btaito:  taito = 'taito/'
-    else:       taito = ''
     
-    path    =   '/space/tohekorh/ShearSlide/files/%s/%s%s/' %(ia, taito, edge) 
+    path    =   '/space/tohekorh/ShearSlide/files/%s_%i/%s/' %(ia, T, key) 
     data    =   []
     print path
     for x in os.walk(path):
@@ -28,11 +26,10 @@ def get_datas(ia, edge, btaito = True):
                         print filen 
                         if query_yes_no('Take this file?', default="yes"):
                             fPath   =   folder + '/' + filen
-                            _, L, width_i, _, _, _, _, _, _, \
-                            thres_Z, _, _, _, _   =   \
+                            wf, L, width_i, _, _, _, _, _, _, \
+                            _, _, _, _,_, _   =   \
                                         read_simul_params_file(fPath)
                             
-                            print thres_Z
                             if width_i != W: raise
                             
                             logpath =   fPath[:-6] + '.log'
@@ -42,8 +39,13 @@ def get_datas(ia, edge, btaito = True):
                                     line = lines[i]
                                     if line[:7] == '# Kink!':
                                         ne = lines[i - 1] # you may want to check that i < len(lines)
-                                        shift, Rad  =   ne.split(' ')[1:3]
-                                        data.append([W, L, float(shift), float(Rad)])
+                                        shift_b, Rad_b, theta_b  =   ne.split(' ')[1:4]
+                                    elif line[:15] == '# Kink vanished':
+                                        ne = lines[i - 1] # you may want to check that i < len(lines)
+                                        shift_d, Rad_d, theta_d  =   ne.split(' ')[1:4]
                                         break
+                                data.append([wf, L, float(shift_b), float(Rad_b), float(theta_b), \
+                                                    float(shift_d), float(Rad_d), float(theta_d)])
     
+                                    
     return data

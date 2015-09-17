@@ -29,13 +29,23 @@ def shearDyn(params_set, save = False):
     dt, fric=   params_set['dt'], params_set['fric']
     tau     =   params_set['tau']
     vmax    =   params_set['vmax']
+    vMAX    =   params_set['vMAX']
     thres_Z =   params_set['thresZ']
     width   =   params_set['width']
     ratio   =   params_set['ratio']
     edge    =   params_set['edge']
     
+    
+    
     atoms, L, W, length_int, b_idxs     =   \
             create_stucture(ratio, width, edge, key = 'top')
+    
+    mdfile, mdlogfile, mdrelax, simulfile, folder, relaxed \
+                        =   get_fileName('LJ', edge + '_twistRod', width, \
+                                        length_int, vmax * 1000, int(T), taito)
+    
+    if relaxed:
+        atoms   =   PickleTrajectory(mdrelax, 'r')[-1]
     
     # FIXES
     constraints, add_LJ, twist, rend_b, rend_t =   \
@@ -49,9 +59,6 @@ def shearDyn(params_set, save = False):
     # END CALCULATOR
     
     # TRAJECTORY
-    mdfile, mdlogfile, mdrelax, simulfile, folder \
-                        =   get_fileName('LJ', edge + '_twistRod', width, \
-                                                 length_int, int(T), taito)
     
     if save:    traj    =   PickleTrajectory(mdfile, 'w', atoms)
     else:       traj    =   None
@@ -82,24 +89,29 @@ def shearDyn(params_set, save = False):
     kink_formed =   False
     kink_vanished   =   False
     i           =   0
-    print 'width = %i, length = %i' %(width, length_int)
+    print 'width = %i, length = %i, v=%.6f' %(width, length_int, vmax)
     
     
     M_therm     =   int(tau / dt)
     dyn.run(M_therm)
     
     M               =   int(2 * L / (np.pi * dt * vmax))
+    M_min           =   int(2 * L / (np.pi * dt * vMAX))
     dtheta          =   np.pi / 2 / M
+    dtheta_max      =   np.pi / 2 / M_min
+    
     interval        =   int( M / 1000 ) 
     theta, time, m  =   0., 0., 0
     i_kink          =   0
-    idxb, idxt      =   twist.pairs[0]
     
     
     while 0. <= theta:
         
         if not kink_formed:
-            theta      +=   dtheta
+            if theta < np.pi/4:
+                theta      +=   dtheta_max
+            else:
+                theta      +=   dtheta
             twist.set_angle(theta)
         else:
             if i_kink / 10 < m: 
@@ -111,11 +123,6 @@ def shearDyn(params_set, save = False):
         if i % interval == 0:
             epot, ekin  =   saveAndPrint(atoms, traj, False)[:2]
             deltaY      =   atoms.positions[rend_b, 1] - y0
-            
-            angle       =   np.arccos(np.dot(atoms.positions[idxt] - atoms.positions[idxb], [0.,1,0]) / \
-                                      np.linalg.norm(atoms.positions[idxt] - atoms.positions[idxb])) / (2 * np.pi) * 360
-            
-            print theta / (2 * np.pi) * 360 - angle
             
             hmax        =   np.max(atoms.positions[:,2]) #substract the height of the plane?
             R           =   get_R(L, deltaY)

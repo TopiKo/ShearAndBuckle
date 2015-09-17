@@ -91,7 +91,7 @@ def read_simul_params_file(fname):
     edge    =   find_between( lines[15], ' = ', ' ' )
     
     #width, length, width_i, length_i, v, T, dt, fric, dy, \
-    #        thresZ, interval, deltaY, M, edge
+    #        thresZ, interval, deltaY theta, M, edge
     
     return float(width), float(length), int(width_i), int(length_i), float(vel), \
            float(temp), float(dt), float(fric), float(dy), \

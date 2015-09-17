@@ -11,31 +11,26 @@ import matplotlib.pyplot as plt
 plt.rc('text', usetex=True)
 fig_w   =   6
 taito   =   True
+T       =   10
 
 def plot_kinkOfBend(edge):
     
-    #datas1      =   get_datas('LJ', edge, taito)
-    datas2      =   get_datas('LJ', edge + '_ff', taito)
-
-    #full_data1  =   np.zeros((len(datas1),5))
-    full_data2  =   np.zeros((len(datas2),5))
+    datas   =   get_datas('LJ', T, '%s_twistTaito' %edge)
+    data    =   np.array(datas)
     
-    #for i, data in enumerate(datas1):
-    #    full_data1[i]    =  get_data(data, edge) 
-          
-    for i, data in enumerate(datas2):
-        full_data2[i]    =  get_data(data, edge)   
     
-    #print full_data1[:,2]
-    print full_data2[:,2]
-
+ 
     plt.figure(figsize = (fig_w, 2. / 3 * fig_w)) 
-    LMax    =   np.max(full_data2[:,1])/10
-    #plt.scatter(full_data1[:,0], full_data1[:,4], color = 'g', label = r'$\hat{v}$=const, $L_{max}=%.2f$nm' %LMax)
-    plt.scatter(full_data2[:,0], full_data2[:,4], color = 'r', label = '$\hat{v}$=variab , $L_{max}=%.2f$nm' %LMax)
+    theta_b =   data[:,0] / (2 * data[:,3])
+    theta_v =   data[:,0] / (2 * data[:,6])
+
+    LMax    =   np.max(data[:,1])/10
+    plt.scatter(data[:,0], theta_b, color = 'b', label = r'bucle born, $L_{max}=%.2f$nm' %LMax)
+    plt.scatter(data[:,0], theta_v, color = 'r', label = r'bucle vani')
+
     plt.legend(frameon = False, loc = 2)
-    plt.text(10, .032, r'Experim. $\theta \approx 0.013$')
-    plt.title('Buckling, edge=zz')
+    plt.text(10, .062, r'Experim. $\theta \approx 0.013$')
+    plt.title('Buckling, edge=%s, T=%iK' %(edge, T))
     plt.xlabel(r'width \AA')
     plt.ylabel(r'$\theta$')
     plt.show()

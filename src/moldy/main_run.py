@@ -6,21 +6,25 @@ Created on 31.8.2015
 
 from twist_topByRod import shearDyn
 from misc.lammps_help import get_simulParams
-from hysteresis import hyster_study
+import sys
 
-taito               =   False
-widths, edge, ratio =   [7], 'ac', 7
+#width, edge, ratio  =  int(sys.argv[1]), sys.argv[2], int(sys.argv[3])
+
+width, edge, ratio =   7, 'ac', 7
+vs      =   [0.0001, 0.0002, 0.0003, 0.0004, 0.0005]   
+taito   =   False
 
 
 params_dic          =   get_simulParams(edge)[-1]
 params_dic['taito'] =   taito
 params_dic['ratio'] =   ratio
-#params_dic['vmax']  =   .01
+params_dic['width'] =   width
+params_dic['vMAX']  =   .0008    
+#
 
-#folder = '/space/tohekorh/ShearSlide/files/LJ_10/ac_twistRod/w=5/'
-for width in widths:
-    params_dic['width'] =   width
-    folder  =   shearDyn(params_dic, True)
-    #hyster_study(edge, folder)
+for _ in range(0, 5):
+    for v in vs:
+        params_dic['vmax']  =   v
+        folder  =   shearDyn(params_dic, True)
     
     

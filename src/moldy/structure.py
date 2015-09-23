@@ -9,6 +9,8 @@ from ase.visualize import view
 from ase.constraints import FixedPlane, FixedLine, FixAtoms
 from ase.calculators.neighborlist import NeighborList
 from potentials.LJ_smooth import LJ_potential_smooth
+from potentials.KC_imagBottom import KC_potential_p
+
 from potentials.twist_const import twist_const_F, twistConst_Rod
 
 import numpy as np
@@ -41,7 +43,7 @@ def create_stucture(ratio, width, edge, key = 'top', a = 1.42):
     top     =   graphene_nanoribbon2(length, width, edge_type=edge, 
                                     saturated=True, 
                                     C_H=1.09,
-                                    C_C=1.42, 
+                                    C_C=a, 
                                     vacuum=2.5, 
                                     sheet=False, 
                                     main_element='C', 
@@ -50,7 +52,7 @@ def create_stucture(ratio, width, edge, key = 'top', a = 1.42):
     base    =   graphene_nanoribbon2(b_l, b_w, edge_type=edge, 
                                     saturated=True, 
                                     C_H=1.09,
-                                    C_C=1.42, 
+                                    C_C=a, 
                                     vacuum=2.5, 
                                     sheet=False, 
                                     main_element='C', 
@@ -367,7 +369,7 @@ def get_posInds(atoms, key = 'redge', *args):
         return ledge_s, ledge_h
     
 
-def get_constraints(atoms, edge, bond, idxs, key = 'shear'):
+def get_constraints(atoms, edge, bond, idxs, key = 'shear_p', pot = 'LJ'):
     
     if key == 'shear':
         # FIXES
@@ -452,7 +454,20 @@ def get_constraints(atoms, edge, bond, idxs, key = 'shear'):
                 constraints.append(FixedLine(i, (0,0,1)))
           
         # KC
-        add_LJ          =   LJ_potential_smooth(bond)
+        if pot == 'KC':
+            params  =   {}
+            params['positions']         =   atoms.positions
+            params['chemical_symbols']  =   atoms.get_chemical_symbols()   
+            params['ia_dist']           =   10
+            params['edge']              =   edge
+            params['bond']              =   bond    
+            params['ncores']            =   1
+            add_pot     =   KC_potential_p(params)
+            
+        elif pot == 'LJ':
+            add_pot =   LJ_potential_smooth(atoms, bond)
+        
+        
         if len(rend_b) != len(rend_t) != 1: raise
         
         #dist            =   np.linalg.norm(atoms.positions[rend_b[0]] - atoms.positions[rend_t[0]])
@@ -462,10 +477,31 @@ def get_constraints(atoms, edge, bond, idxs, key = 'shear'):
         constraints.append(FixedPlane(rend_b[0], (0,0,1)))
         
         
-        constraints.append(add_LJ)
+        constraints.append(add_pot)
         constraints.append(twist)
         # END FIXES
         
-        return constraints, add_LJ, twist, rend_b[0], rend_t[0]
+        return constraints, add_pot, twist, rend_b[0], rend_t[0]
+
+def trans_atomsKC(ru, edge, bond):
         
+    
+    if edge == 'ac':
+        nx  =   int(ru[0]/(3*bond))
+        ny  =   int(ru[1]/(np.sqrt(3)*bond))
+        
+        trans   =   np.array([3*bond*nx, np.sqrt(3)*bond*ny, 0]) \
+                  - np.array([ru[0] - bond, ru[1], 0.])  
+        
+    elif edge == 'zz':
+    
+        nx  =   int(ru[0]/(np.sqrt(3)*bond))
+        ny  =   int(ru[1]/(3*bond))
+        
+        trans   =   np.array([np.sqrt(3)*bond*nx, 3*bond*ny, 0]) \
+                -   np.array([ru[0], ru[1] - bond, 0.])
+        
+    return trans
+
+    
     

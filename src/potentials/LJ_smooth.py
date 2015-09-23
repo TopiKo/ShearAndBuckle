@@ -8,28 +8,32 @@ import numpy as np
 class LJ_potential_smooth:
     
     
-    def __init__(self, bond):
+    def __init__(self, atoms, bond):
         
         self.ecc        =   0.002843732471143
         self.sigmacc    =   3.4
         self.cPerA      =   4. / (3 * np.sqrt(3) * bond**2)
-        
+        self.indsC      =   []
+        for i, atom in enumerate(atoms):
+            if atom.number == 6:
+                self.indsC.append(i)
+
     def adjust_positions(self, oldpositions, newpositions):
         pass
     
     
     def adjust_forces(self, posits, forces):
         
-        forces[:,2] +=  8*np.pi * self.cPerA * self.ecc * \
-                        (self.sigmacc**12 / posits[:,2]**11 \
-                       - self.sigmacc**6 / posits[:,2]**5)
+        forces[self.indsC, 2] +=  8*np.pi * self.cPerA * self.ecc * \
+                        (self.sigmacc**12 / posits[self.indsC, 2]**11 \
+                       - self.sigmacc**6 / posits[self.indsC, 2]**5)
    
      
     def adjust_potential_energy(self, posits, energy):
         
-        e           =  2. / 5 * np.pi * self.cPerA * self.ecc * \
-                        (2 * (self.sigmacc**6 / posits[:,2]**5)**2 \
-                       - 5 * (self.sigmacc**3 / posits[:,2]**2)**2) 
+        e           =   2. / 5 * np.pi * self.cPerA * self.ecc * \
+                        (2 * (self.sigmacc**6 / posits[self.indsC, 2]**5)**2 \
+                       - 5 * (self.sigmacc**3 / posits[self.indsC, 2]**2)**2) 
    
         return np.sum(e)
     

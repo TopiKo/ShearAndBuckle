@@ -11,17 +11,19 @@ from misc.ui import write_line_own, make_simul_param_file
 from misc.lammps_help import get_lammps_params
 from filenames import get_fileName
 from write_structure import saveAndPrint
-from structure import create_stucture, get_constraints
+from structure import create_stucture, get_constraints, trans_atomsKC
 from ase.calculators.lammpsrun import LAMMPS
-#from ase.visualize import view
+from ase.visualize import view
 from ase.io.trajectory import PickleTrajectory
 from ase.md.langevin import Langevin
 from ase.optimize import BFGS
 from ase.md.velocitydistribution import MaxwellBoltzmannDistribution as mbd
 from ase import units
+from analyze.plot import plot_posits
 
 
-def shearDyn(params_set, save = False):
+
+def shearDyn(params_set, pot_key, save = False):
     
     bond    =   params_set['bond']
     T       =   params_set['T']
@@ -38,20 +40,27 @@ def shearDyn(params_set, save = False):
     
     
     atoms, L, W, length_int, b_idxs     =   \
-            create_stucture(ratio, width, edge, key = 'top')
+            create_stucture(ratio, width, edge, key = 'top', a = bond)
     
     mdfile, mdlogfile, mdrelax, simulfile, folder, relaxed \
-                        =   get_fileName('LJ', edge + '_twistRod', width, \
+                        =   get_fileName(pot_key, edge + '_twistRod', width, \
                                         length_int, vmax * 1000, int(T), taito)
     
+    
+    #view(atoms)
+    # FIXES
+    constraints, add_pot, twist, rend_b, rend_t =   \
+            get_constraints(atoms, edge, bond, b_idxs, \
+                            key = 'twist_p', pot = pot_key)
+    # END FIXES
+
     if relaxed:
         atoms   =   PickleTrajectory(mdrelax, 'r')[-1]
+    else:
+        trans   =   trans_atomsKC(atoms.positions[rend_b], edge, bond)
+        atoms.translate(trans) 
     
-    # FIXES
-    constraints, add_LJ, twist, rend_b, rend_t =   \
-            get_constraints(atoms, edge, bond, b_idxs, key = 'twist_p')
-    # END FIXES
-    
+    #plot_posits(atoms, edge, bond)
     
     # CALCULATOR LAMMPS 
     calc    =   LAMMPS(parameters=get_lammps_params()) 
@@ -59,17 +68,16 @@ def shearDyn(params_set, save = False):
     # END CALCULATOR
     
     # TRAJECTORY
-    
     if save:    traj    =   PickleTrajectory(mdfile, 'w', atoms)
     else:       traj    =   None
     
     #data    =   np.zeros((M/interval, 5))
     
     # RELAX
-    atoms.set_constraint(add_LJ)
+    atoms.set_constraint(add_pot)
     dyn     =   BFGS(atoms, trajectory = mdrelax)
     dyn.run(fmax=0.05)
-    
+
     dist    =   np.linalg.norm(atoms.positions[rend_b] - atoms.positions[rend_t])
     twist.set_dist(dist)
     # FIX AFTER RELAXATION

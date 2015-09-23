@@ -4,15 +4,26 @@ Created on 24.8.2015
 @author: tohekorh
 '''
 
-def get_lammps_params():
+def get_lammps_params(H = True):
     
-    parameters = {'pair_style':'rebo',
-                  'pair_coeff':['* * CH.airebo C H'],
-                  'mass'      :['1 12.0', '2 1.0'],
-                  'units'     :'metal', 
-                  'boundary'  :'f f f'}
-    
-    return parameters
+    if H:
+        parameters = {'pair_style':'rebo',
+                      'pair_coeff':['* * CH.airebo C H'],
+                      'mass'      :['1 12.0', '2 1.0'],
+                      'units'     :'metal', 
+                      'boundary'  :'f f f'}
+        
+        return parameters
+
+    else:
+        parameters = {'pair_style':'rebo',
+                      'pair_coeff':['* * CH.airebo C'],
+                      'mass'      :['1 12.0'],
+                      'units'     :'metal', 
+                      'boundary'  :'f f f'}
+        
+        return parameters
+
 
 def get_simulParams(edge):
     

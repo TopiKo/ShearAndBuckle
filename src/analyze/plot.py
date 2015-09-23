@@ -7,12 +7,36 @@ from read import get_datas
 from misc.solvers import int_toAngst
 import numpy as np
 import matplotlib.pyplot as plt
+from potentials.KC_imagBottom import make_neighSet, get_setOrig
 
 plt.rc('text', usetex=True)
 fig_w   =   6
 taito   =   True
 T       =   10
 
+def plot_posits(atoms, edge, bond):
+    
+    positions   =   atoms.positions
+    pos_used    =   []
+    n_set       =   make_neighSet(15, edge, bond)
+            
+    for i, r in enumerate(positions):
+        if atoms[i].number == 6:
+            norms   =   [np.linalg.norm(x) for x in positions[pos_used] - r]
+            if len(norms) != 0: 
+                if 4 < np.min([np.linalg.norm(x) for x in positions[pos_used] - r]):  
+                    neigh_set   =   get_setOrig(r, edge, bond) + n_set
+                    pos_used.append(i)
+                    plt.scatter(neigh_set[:,0], neigh_set[:,1], color = 'red', alpha = .5)
+            else:
+                neigh_set   =   get_setOrig(r, edge, bond) + n_set
+                pos_used.append(i)
+                plt.scatter(neigh_set[:,0], neigh_set[:,1], color = 'red', alpha = .5)
+            
+    plt.scatter(positions[:,0], positions[:,1], color = 'black')
+    plt.axis('equal')
+    plt.show()
+            
 def plot_kinkOfBend(edge):
     
     datas   =   get_datas('LJ', T, '%s_twistTaito' %edge)
@@ -49,4 +73,4 @@ def get_data(data, edge):
     return [Wf, Lf, Dy, R, theta]
     
 
-plot_kinkOfBend('ac')
+#plot_kinkOfBend('ac')

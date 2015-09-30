@@ -47,7 +47,7 @@ def get_adhesion_energy(atoms, hmax, acc, natoms):
         
     return adh_pot
 
-def get_optimal_h(atoms, natoms, dyn = False):
+def get_optimal_h(atoms, natoms, dyn = False, show = False):
     
     # This find the optimal h - when the top is sliding:
     
@@ -65,11 +65,12 @@ def get_optimal_h(atoms, natoms, dyn = False):
             #print   z, e
             return  e  
         
-        hmin    =   fmin(get_epot, 3.4)
+        hmin    =   fmin(get_epot, 3.4, disp = 0)
         emin    =   get_epot(hmin)
         
         atoms.positions = pos_init
-        print 'optimal height= %.2f and e=%.2f' %(hmin, emin) 
+        
+        if show:    print 'optimal height= %.2f and e=%.2f' %(hmin, emin) 
         return emin, hmin
     else:
         dyn         =   BFGS(atoms)

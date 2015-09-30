@@ -37,7 +37,7 @@ def get_setOrig(r, edge, bond):
         
         
 
-def gradN(ri, ind, positions, layer_neighbors, take_t = False):
+def gradN(ri, ind, positions, layer_neighbors, take_t = False, no_edge_neighbor = False):
     # Matrix
     #dn1/dx dn2/dx dn3/dx
     #dn1/dy dn2/dy dn3/dy
@@ -52,7 +52,8 @@ def gradN(ri, ind, positions, layer_neighbors, take_t = False):
         posits_use[ind, i]      =   xi
         #posits_ext_use          =   extend_structure(posits_use.copy(), pbc, cell)
                
-        nj                      =   local_normal(ind, posits_use, layer_neighbors)
+        nj                      =   local_normal(ind, posits_use, layer_neighbors, \
+                                                 accept_noneighbor = no_edge_neighbor)
                 
         return nj
         
@@ -148,7 +149,7 @@ def get_potential_ij(ri, rj, ni, nj, positions, i, params, \
     return e_KC
 
 def grad_pot_ij(posits, i, rj, params, \
-                cutoff, layer_neighbors):                                
+                cutoff, layer_neighbors, no_edge_neighbor = False):                                
     
     def e(rik, *args):
         k               =   args[0]
@@ -157,8 +158,8 @@ def grad_pot_ij(posits, i, rj, params, \
         ri              =   posits_use[i]
         #posits_ext      =   extend_structure(posits_use, pbc, cell)
 
-        ni          =   local_normal(i, posits, layer_neighbors)*(-1)
-        nj          =   np.array([0.,0.,1.])#local_normal(j, posits_ext, layer_neighbors)*njfac
+        ni          =   local_normal(i, posits, layer_neighbors, accept_noneighbor = no_edge_neighbor)*(-1)
+        nj          =   np.array([0.,0.,1.])
         
         
         return get_potential_ij(ri, rj, ni, nj, posits_use, i, params, cutoff)
@@ -173,7 +174,7 @@ def grad_pot_ij(posits, i, rj, params, \
     return de
 
 def get_forces_ij(ri, rj, ni, nj, dni, dnj, positions, i, params, \
-                      cutoff, layer_neighbors = None):
+                      cutoff, layer_neighbors = None, no_edge_neighbor = False):
         
     Fij             =   zeros(3)
     Fji             =   zeros(3)
@@ -207,7 +208,7 @@ def get_forces_ij(ri, rj, ni, nj, dni, dnj, positions, i, params, \
     if layer_neighbors != None:
         
         fij = -grad_pot_ij(positions.copy(), i, rj, params, \
-                              cutoff, layer_neighbors)
+                              cutoff, layer_neighbors, no_edge_neighbor)
         #fji= -grad_pot_ij(positions.copy(), rj, i, params, \
         #                      cutoff, layer_neighbors, not jtop)
 
@@ -297,13 +298,14 @@ class KC_potential_p:
     # This is a constraint class to include the registry dependent 
     # interlayer potential to ase. 
     
-    def __init__(self, params):
+    def __init__(self, params, no_edge_neigh = False):
         
         posits          =   params['positions']
         self.chem_symbs =   params['chemical_symbols']
         self.cutoff     =   params['ia_dist']
         self.edge       =   params['edge']
         self.bond       =   params['bond']
+        self.no_edge_neighbor   =   no_edge_neigh
         self.neigh_set  =   make_neighSet(15, self.edge, self.bond)
         
         # parameters as reported in original KC paper
@@ -440,7 +442,8 @@ class KC_potential_p:
         for j, r in enumerate(pos_arr):
             ind_atom    =   j  + split_beg
             if chem_symbs[ind_atom] == 'C': # SHEAR ADD  (and ind_atom in..)
-                dni             =   gradN(r, ind_atom, posits, layer_neighbors)
+                dni             =   gradN(r, ind_atom, posits, layer_neighbors, \
+                                          no_edge_neighbor = self.no_edge_neighbor)
                 ar11[ind_atom]  =   dni[0,0]
                 ar12[ind_atom]  =   dni[0,1]
                 ar13[ind_atom]  =   dni[0,2]
@@ -467,7 +470,7 @@ class KC_potential_p:
             i   =   l  + split_beg 
             if chem_symbs[i] == 'C': # SHREAR ADD
                 
-                ni_f        =   local_normal(i, posits, layer_neighbors)
+                ni_f        =   local_normal(i, posits, layer_neighbors, accept_noneighbor = self.no_edge_neighbor)
                 dni_f       =   dnGreat[i]
                     
                 ni          =   -1*ni_f
@@ -484,7 +487,7 @@ class KC_potential_p:
                     # Force due to atom j on atom i
                     fij     =   get_forces_ij(ri, rj, ni, nj, dni, dnj, \
                                               posits, i, params, \
-                                              cutoff) #, layer_neighbors = layer_neighbors)
+                                              cutoff, no_edge_neighbor = self.no_edge_neighbor) #, layer_neighbors = layer_neighbors)
             
                     
                     af1[i]  +=  fij[0]
@@ -544,7 +547,7 @@ class KC_potential_p:
         for l, ri in enumerate(pos_arr):
             i   =   l  + split_len 
             if chem_symbs[i] == 'C': # SHEAR ADD
-                ni          =   local_normal(i, posits, layer_neighbors)
+                ni          =   local_normal(i, posits, layer_neighbors, accept_noneighbor = self.no_edge_neighbor)
                 ni          =   -1*ni
                     
                 neigh_orig  =   get_setOrig(ri, self.edge, self.bond)
@@ -572,7 +575,7 @@ class KC_potential_p:
         
         for i, ri in enumerate(posits):
             if chem_symbs[i] == 'C':
-                ni              =   local_normal(i, posits, layer_neighbors)
+                ni              =   local_normal(i, posits, layer_neighbors, accept_noneighbor = self.no_edge_neighbor)
                 
                 ni          =   -1*ni
                 nj          =   np.array([0., 0., 1.])    

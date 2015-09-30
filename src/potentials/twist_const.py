@@ -112,10 +112,10 @@ class twistConst_Rod_old:
 class twistConst_Rod:
     
     
-    def __init__(self, atoms, n, edge, bond):
+    def __init__(self, atoms, n, edge, bond, F = 10.):
         
         self.pairs  =   get_rightRodInds(atoms, n, edge, bond)
-        self.F      =   10.
+        self.F      =   F
         self.set_angle(0)
         
     def adjust_positions(self, oldpositions, newpositions):

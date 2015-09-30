@@ -156,7 +156,7 @@ def map_rjs(rj, pbc, cell, n, ia_length):
     return rjs
 
 
-def local_normal(i, posits, layer_neighbors, const = False):
+def local_normal(i, posits, layer_neighbors, const = False, accept_noneighbor = False):
     
     
     #tang_vec    =   np.zeros((len(layer_neighbors[i]), 3))
@@ -232,9 +232,12 @@ def local_normal(i, posits, layer_neighbors, const = False):
             return normal
             
         else:
-            print i, layer_neighbors[i]
-            print ri, posits[layer_neighbors[i]]
-            raise
+            if accept_noneighbor:
+                return np.array([0.,0.,1.])
+            else:
+                print i, layer_neighbors[i]
+                print ri, posits[layer_neighbors[i]]
+                raise
     
     else:
         

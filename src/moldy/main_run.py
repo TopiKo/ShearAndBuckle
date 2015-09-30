@@ -26,5 +26,3 @@ for _ in range(0, 5):
     for v in vs:
         params_dic['vmax']  =   v
         folder  =   shearDyn(params_dic, pot_key, True)
-    
-    

@@ -96,7 +96,49 @@ def read_simul_params_file(fname):
     return float(width), float(length), int(width_i), int(length_i), float(vel), \
            float(temp), float(dt), float(fric), float(dy), \
             float(thresZ), int(interval), float(deltaY), float(theta), int(M), edge
+
+def make_stick_simul_param_file(fname, width, length, length_dilde, T, \
+                          dt, fric, interval, M, edge, stick):
+
+    log_f       =   open(fname, 'w')
+    log_f.write('This is the params file. \n')
     
+    log_f.write('width_i = %i \n' %width)
+    log_f.write('length = %.4f Angst \n' %length)
+    log_f.write('lengthD = %.4f Angst  \n' %length_dilde)
+
+    log_f.write('Temp = %.1f [K] \n' %T)
+    log_f.write('dt = %.4f [fs] \n' %dt)
+    log_f.write('fric = %.4f \n' %fric)
+    log_f.write('interval = %i \n' %interval)
+    log_f.write('M = %i \n' %M)
+    log_f.write('edge = %s \n' %edge)
+    log_f.write('stick = %s \n' %stick)
+    
+    
+    log_f.close()
+    
+def read_stick_simul_params_file(fname):
+    
+    log_f =   open(fname, 'r')
+    lines = log_f.readlines()
+    
+    width_i =   find_between( lines[3],  ' = ', ' ' )
+    length  =   find_between( lines[4],  ' = ', ' ' )
+    length_d=   find_between( lines[4],  ' = ', ' ' )
+    temp    =   find_between( lines[6],  ' = ', ' ' )
+    dt      =   find_between( lines[7],  ' = ', ' ' )
+    fric    =   find_between( lines[8],  ' = ', ' ' )
+    interval=   find_between( lines[11], ' = ', ' ' )
+    M       =   find_between( lines[14], ' = ', ' ' )
+    edge    =   find_between( lines[15], ' = ', ' ' )
+    stick   =   find_between( lines[15], ' = ', ' ' )
+    
+    #width, length, width_i, length_i, v, T, dt, fric, dy, \
+    #        thresZ, interval, deltaY theta, M, edge
+    
+    return int(width_i), float(length), float(length_d), float(temp), \
+        float(dt), float(fric), int(interval), int(M), edge, stick in ['True', 'true', '1']
     
     
 def find_between( s, first, last ):

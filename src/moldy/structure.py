@@ -153,7 +153,132 @@ def create_stucture(ratio, width, edge, key = 'top', a = 1.42):
         atoms.pbc   =   [False, False, False]
         return atoms, L, W, length, atoms_base
 
+def strip_Hend(atoms, end):
+    
+    cmaxx   =   0.
+    cminx   =   1000.
+    for atom in atoms:
+        if atom.number == 6:
+            if cmaxx < atom.position[0]:
+                cmaxx   =   atom.position[0]    
+            if atom.position[0] < cminx:
+                cminx   =   atom.position[0]
+    
+    if end == 'right':
+        coll_right_h    =   []
+        for i, atom in enumerate(atoms):
+            if atom.number == 1 and cmaxx < atom.position[0]:
+                coll_right_h.append(i)
 
+        del atoms[coll_right_h]
+
+    elif end == 'left':           
+        coll_left_h    =   []
+        for i, atom in enumerate(atoms):
+            if atom.number == 1 and atom.position[0] < cminx:
+                coll_left_h.append(i)
+
+        del atoms[coll_left_h] 
+        
+    return cminx, cmaxx
+
+def get_idxOfEnds(atoms, cminx, cmaxx):
+    
+    left, right =   [],[]
+    
+    for i, atom in enumerate(atoms):
+        if atom.position[0] < cminx + .02 and atom.number == 6:
+            left.append(i)
+        if cmaxx - .02 < atom.position[0] and atom.number == 6:
+            right.append(i)
+
+    return left, right
+
+
+def create_bend_stucture(width, lw_ratio, LdildeL_ratio, edge, bond):
+    
+    
+    L_int       =   get_length(lw_ratio, width, edge)
+    
+    Ldilde_i    =   int(L_int * LdildeL_ratio)
+    
+    bend        =   graphene_nanoribbon2(L_int, width, edge_type=edge, 
+                                         saturated=True, 
+                                         C_H=1.09,
+                                         C_C=bond, 
+                                         vacuum=2.5, 
+                                         sheet=False, 
+                                         main_element='C', 
+                                         saturate_element='H')
+    
+
+    cminx, cmaxx    =   strip_Hend(bend, 'right')
+    L_bend          =   cmaxx - cminx 
+    left_b, right_b =   get_idxOfEnds(bend, cminx, cmaxx)
+    matchL_idx      =   right_b[np.where(np.min(bend.positions[right_b, 1]) 
+                                       == bend.positions[right_b, 1])[0][0]] 
+    
+
+    yav         =   np.average(bend.positions[:,1])    
+    xarea       =   L_bend
+    R           =   xarea/(np.pi/3)
+    for atom in bend:
+        old_pos =   atom.position
+        angle   =   -(old_pos[0] - cminx)/(xarea)*np.pi/3 + np.pi/2
+        rad     =   R + old_pos[1] - yav
+        
+        new_pos =   [rad*np.cos(angle), rad*np.sin(angle), old_pos[2]]
+        atom.position  =   new_pos
+    
+    straight=   graphene_nanoribbon2(Ldilde_i, width, edge_type=edge, 
+                                     saturated=True, 
+                                     C_H=1.09,
+                                     C_C=bond, 
+                                     vacuum=2.5, 
+                                     sheet=False, 
+                                     main_element='C', 
+                                     saturate_element='H')
+
+    
+    cminx, cmaxx    =   strip_Hend(straight, 'left')
+    L_straight      =   cmaxx - cminx
+    left_st         =   get_idxOfEnds(straight, cminx, cmaxx)[0]
+    
+    vec     =   np.array([bond/2, -np.sqrt(3)/2*bond, 0.])
+    if edge == 'zz':
+        del straight[left_st]
+        cminx, cmaxx=   strip_Hend(straight, 'left')
+        left_st     =   get_idxOfEnds(straight, cminx, cmaxx)[0]
+        L_straight  =   cmaxx - cminx
+        vec         =   np.array([0., -bond, 0.])
+    
+    matchR_idx      =   left_st[np.where(np.min(straight.positions[left_st, 1]) 
+                                       == straight.positions[left_st, 1])[0][0]] 
+    
+    straight.rotate([0.,0.,1.], -np.pi/3)
+    
+    
+    
+    #cellxt  =   1.5*(L_straight + L_bend)
+    #cellyt  =   2*(np.max(tot_str.positions[:,1]) - np.min(tot_str.positions[:,1]))
+    #cellzt  =   20
+
+    cellxb  =   1.5*L_bend
+    cellyb  =   2*(np.max(bend.positions[:,1]) - np.min(bend.positions[:,1]))
+    cellzb  =   20
+
+    bend.set_cell([cellxb, cellyb, cellzb])
+    bend.center()
+    bend.positions[:,2] =   3.4
+
+    
+    #tot_str.set_cell([cellxt, cellyt, cellzt])
+    #tot_str.center()
+    
+    #tot_str.positions[:,2] =   3.4
+    
+    return bend, straight, [matchL_idx, matchR_idx, vec], [L_bend, L_straight], [left_b, right_b]
+    
 
 def graphene_nanoribbon2(length, width, edge_type='zz', saturated=False, C_H=1.09,
                         C_C=1.42, vacuum=2.5, magnetic=None, initial_mag=1.12,
@@ -294,7 +419,9 @@ def get_length(ratio, width, edge):
         else: return length
     
     elif edge == 'ac':
-        length  =   int(ratio * np.sqrt(3) * (width - 1) / 3. + 2./3 )
+        length  =   int(ratio * np.sqrt(3) * (width - 1) / 6. + 2./3 )
+        #length  =   int(ratio * np.sqrt(3) * (width - 1) / 3. + 2./3 )
+        
         return length
 
 def get_topInds(atoms):
@@ -502,6 +629,8 @@ def trans_atomsKC(ru, edge, bond):
                 -   np.array([ru[0], ru[1] - bond, 0.])
         
     return trans
+    
 
+#create_bend_stucture(5, 7, .5, 'ac', 1.39)
     
     

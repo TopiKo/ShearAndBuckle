@@ -34,5 +34,19 @@ def int_toAngst(thatInt, edge, key = 'width', C_C = 1.42):
             return (thatInt -1) * np.sqrt(3) * C_C / 2. 
         if key == 'length':
             return thatInt * 3. / 2 * C_C - C_C 
+        
+
+
+def get_Ld_quess(width, ratio, edge):
+    
+    bond        =   1.4
+    Theta       =   3.14/(6*ratio)
+    
+    if edge == 'ac': W       =   np.sqrt(3)/2*(width - 1)*bond
+    elif edge == 'zz': W    =   3./2*bond*width - bond  
+    
+    Ld_rat = 44400*Theta**3/W
+    return Ld_rat
+
     
     

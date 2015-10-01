@@ -14,6 +14,7 @@ from ase.calculators.lammpsrun import LAMMPS
 from ase.optimize import BFGS
 from structure import create_stucture
 from ase.visualize import view
+from ase.structure import graphene_nanoribbon
 import matplotlib.pyplot as plt 
 import os
 
@@ -31,12 +32,7 @@ def corr_KC(width, edge):
     atoms.set_cell([40, 40, 20])
     atoms.center()
     atoms.positions[:,2]    =   3.4
-    #atoms   =   graphene_nanoribbon(5, 3, type= 'armchair', C_C=bond, saturated = False)
-    #atoms.rotate([1,0,0], np.pi/2, rotate_cell = True)
-    #atoms.rotate([0,0,1], -np.pi/2, rotate_cell = True)
-    #atoms.set_cell([60, 60, 10])
-    #atoms.center()
-    #del atoms[[48, 51, 52, 55, 56, 59]]
+     
     h_t =   []
     for i in range(len(atoms)):
         if atoms[i].number == 1:
@@ -114,8 +110,8 @@ def study_files(width, edge):
             data    =   np.loadtxt(path + filen)
             data[:,1] -=    np.min(data[:,1]) 
             
-            plt.plot(data[:,0],data[:,1])
-            plt.show()
+            #plt.plot(data[:,0],data[:,1])
+            #plt.show()
             emax    =   np.max(data[:,1])
             theta_dat.append([theta, emax])
     
@@ -142,10 +138,11 @@ def plot_corr(wedges):
 #corr_KC(5, 'ac')
 #plot_corr([[4,'zz'], [5, 'ac']])
 
+
 #widths  =   [5,7,9,11]
 #for width in widths:
 #    corr_KC(width, 'ac') 
 
-widths  =   [4,6,8,10]
-for width in widths:
-    corr_KC(width, 'zz') 
+#widths  =   [4,6,8,10]
+#for width in widths:
+#    corr_KC(width, 'zz') 

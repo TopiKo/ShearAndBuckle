@@ -133,9 +133,9 @@ def runAndStudy(params_set, pot_key, save = False):
     
     # SIMULATION PARAMS 
     nframes     =   1000
-    M           =   int(10*tau/dt)
+    M           =   int(20*tau/dt)
     interval    =   int(M/nframes)
-    thres_cancel=   3*bond
+    thres_cancel=   2*bond
     stick       =   'True'
     xmax_idx    =   np.where(atoms.positions[:,0] == np.max(atoms.positions[:,0]))[0][0]
     r_init      =   atoms.positions[xmax_idx].copy()  
@@ -171,6 +171,7 @@ def runAndStudy(params_set, pot_key, save = False):
     make_stick_simul_param_file(simulfile, width, L_bend, L_straight, T, \
                                 dt, fric, interval, M, edge, stick)
     
+    return stick == 'True'
         
     #plot_posits(atoms, edge, bond)
     #view(atoms)

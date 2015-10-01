@@ -200,7 +200,7 @@ def create_bend_stucture(width, lw_ratio, LdildeL_ratio, edge, bond):
     
     L_int       =   get_length(lw_ratio, width, edge)
     
-    Ldilde_i    =   int(L_int * LdildeL_ratio)
+    Ldilde_i    =   np.max([int(L_int * LdildeL_ratio), 1])
     
     bend        =   graphene_nanoribbon2(L_int, width, edge_type=edge, 
                                          saturated=True, 

@@ -31,7 +31,7 @@ def int_toAngst(thatInt, edge, key = 'width', C_C = 1.42):
     
     if edge == 'ac':
         if key == 'width':
-            return (thatInt -1) * np.sqrt(3) * C_C / 2. 
+            return (thatInt -1) * np.sqrt(3) * C_C / 2.  
         if key == 'length':
             return thatInt * 3. / 2 * C_C - C_C 
         

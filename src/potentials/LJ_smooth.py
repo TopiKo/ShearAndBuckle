@@ -36,9 +36,9 @@ class LJ_potential_smooth:
                        - 5 * (self.sigmacc**3 / posits[self.indsC, 2]**2)**2) 
    
         return np.sum(e)
-    
-# TEST
+
 '''
+# TEST
 from ase import Atoms
 from ase.calculators.lammpsrun import LAMMPS
 import matplotlib.pyplot as plt
@@ -46,10 +46,12 @@ import matplotlib.pyplot as plt
 
 atoms       =   Atoms('C', positions = [[0.,0.,3.4]])
 atoms.cell  =   (5,5,10)
-add_LJ      =   LJ_potential_smooth(1.39695)
+add_LJ      =   LJ_potential_smooth(atoms, 1.39778034758)
 n           =   1000
 
-print -6. / 5. * np.pi * add_LJ.cPerA * add_LJ.ecc * add_LJ.sigmacc**2  
+print 'hoo'
+print str(-6. / 5. * np.pi * add_LJ.cPerA**2 * add_LJ.ecc * add_LJ.sigmacc**2)  + 'eV/Angst^2'
+print str(-6. / 5. * np.pi * add_LJ.cPerA * add_LJ.ecc * add_LJ.sigmacc**2)  + 'eV/atom'
 
 # CALCULATOR LAMMPS 
 parameters = {'pair_style':'rebo',
@@ -90,5 +92,3 @@ plt.plot(h[:-1], -LJ_ed)
 
 plt.show()
 '''
-    
-    

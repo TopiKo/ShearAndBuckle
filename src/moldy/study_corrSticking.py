@@ -57,10 +57,10 @@ def runAndStudy(params_set, pot_key, save = False):
     ratio   =   params_set['ratio']
     edge    =   params_set['edge']
     ncores  =   params_set['ncores']
-    LdL_r   =   params_set['LdildeL_ratio']
+    Ld_i    =   params_set['Ldilde_i']
     
     bend, straight, [matchL_idx, matchR_idx, vec], [L_bend, L_straight], [left_idxs, right_idxs]\
-            =   create_bend_stucture(width, ratio, LdL_r, edge, bond)
+            =   create_bend_stucture(width, ratio, Ld_i, edge, bond)
     
     mdfile, mdlogfile, mdrelax, simulfile, folder, relaxed \
             =   get_fileName(pot_key, edge + '_corrStick', width, \
@@ -141,8 +141,8 @@ def runAndStudy(params_set, pot_key, save = False):
     r_init      =   atoms.positions[xmax_idx].copy()  
     
     R   =   L_bend/np.pi*3.
-    print 'R, width, length bend, theta'
-    print R, width_f, L_bend, width_f/(2*R)
+    print '# data_line: width, length bend, length tail, tail/bend, theta'
+    print width_f, L_bend, L_straight, L_straight/L_bend, width_f/(2*R)
     # SIMULATION LOOP
     for i in range(nframes):
         

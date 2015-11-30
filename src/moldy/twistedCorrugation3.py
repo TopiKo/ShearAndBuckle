@@ -3,16 +3,7 @@ Created on 24.9.2015
 
 @author: tohekorh
 '''
-'''
-Created on 23.9.2015
 
-@author: tohekorh
-'''
-'''
-Created on 22.9.2015
-
-@author: tohekorh
-'''
 import numpy as np
 from misc.lammps_help import get_simulParams, get_lammps_params
 from potentials.KC_imagBottom import KC_potential_p
@@ -103,7 +94,9 @@ def corr_KC():
     r_around    =   init_pos[trans_idx]
     
     #thetas      =   np.linspace(0, np.pi/3, 7) #, endpoint = False)
-    thetas_deg  =   np.array([1,3,5,7,9,11,12,13,15,17,43,45,47,48,49,51,57,55,57,59])
+    #thetas_deg  =   np.array([1,3,5,7,9,11,12,13,15,17,43,45,47,48,49,51,57,55,57,59])
+    thetas_deg  =   np.array([.5,1.5,2.5,3.5,4.5,5.5,6.5,7.5,8.5,9.5,10.5,11.5,12.5,13.5,14.5,15.5,16.5,17.5,18.5,19.5])
+    
     traj        =   PickleTrajectory(path + '%s_corr_twist_thetas_(%.1f-%.1f).traj' \
                                      %(edge, np.min(thetas_deg), 
                                        np.max(thetas_deg)), 'w', atoms)
@@ -343,10 +336,8 @@ def get_minimal_orig(data, width, theta, length, lat_vec_theta1, lat_vec_theta2)
     
     return float(imin) / n * lat_vec_theta1 + float(jmin) / m * lat_vec_theta2, e
     
-def analyze_ribbonCorr(theta, test = False, plot_pic = False):
+def analyze_ribbonCorr(theta, width = 7, length = 25, test = False, plot_pic = False):
     
-    width   =   5
-    length  =   30
     
     for filen in os.listdir(path):
         if filen[:7] == 'corr_%s' %(edge):
@@ -449,17 +440,106 @@ def plot_corr(wedges):
 def plot_corr_ribbon():
     
 
-    thetas  =       [0,1,2,3,4,5,6,7,8,9,10,20,24,26,28,30,32,34,36,40,50,52,54,56,58,60] #[0, 10, 20 ,30, 40, 50, 60]
+    thetas  =       [0,.5,1,1.5,2,2.5,3,3.5,4,4.5,5,5.5,6,6.5,7,7.5,8,8.5,9, 9.5,
+                     10, 10.5, 11,11.5,12,13,15,17,
+                     20,24,26,28,
+                     30,32,34,36,
+                     40,43,45,47,48,49,
+                     50,51,52,54,55,56,57,58,59,60] #[0, 10, 20 ,30, 40, 50, 60]
+    ws  =   [3,5,7,9,11]#[5,7,9,11] #[5, 7, 9, 11, 13, 15, 17, 19, 21]
+    ls  =   [3,5,7,9,11,13,15,17,19,21,23,25] #[3,5,7,9,11,13,15] 
+    inset_e =   np.zeros((len(ws), len(ls), 3))
+    theta_pic   =   10
+    n           =   0
+    #thetas  =   [10, 15]
     cor_e   =   np.zeros((len(thetas),2))
-    for i, theta in enumerate(thetas):
-        cor_e[i]    =   [theta, analyze_ribbonCorr(theta, test = False)]
+    coll_data   =   np.zeros((len(ws)*len(ls), 2 + len(thetas)))
     
-    plt.plot(cor_e[:,0], cor_e[:,1], '-o')
+    for j, w in enumerate(ws):
+        for k, l in enumerate(ls):
+
+            for i, theta in enumerate(thetas):
+                cor_e[i]    =   [theta, analyze_ribbonCorr(theta, width = w, length = l, test = False)]
+                
+                if theta == theta_pic:
+                    #print j,k,w, l, cor_e[i,1]
+                    inset_e[j,k]  =   [w, l, cor_e[i,1]]
+            
+            
+            #print cor_e[:,1]
+            coll_data[n, :2] =  w, l
+            coll_data[n, 2:] =  cor_e[:,1]
+            n           +=  1
+        
+        plt.plot(cor_e[:,0], cor_e[:,1], '-o')
+    
+    
+    #np.savetxt('/space/tohekorh/ShearSlide/files/corr_data_%s.txt' %edge, 
+    #           coll_data, header= 'w, l, max cor on given theta, thetas = ' + str(thetas))
+    
+    #print np.loadtxt('/space/tohekorh/ShearSlide/files/corr_data_%s.txt' %edge)
+    
+    plt.xlabel('Rotation Deg')
+    plt.ylabel('Corrugation barrier eV/atom')
+    plt.title('Corrugation barrier for rotated ribbon \n edge = %s' %edge)
+    plt.savefig('/space/tohekorh/ShearSlide/pictures/corr_barr_%s.png' %edge)
+    plt.show()
+    
+    print inset_e
+    print inset_e[:,0,2]
+    
+    #for i in range(len(inset_e[0,:,0])):
+    #    plt.plot(inset_e[:,i,0], inset_e[:,i,2], label = inset_e[0,i,1])
+    #plt.xlabel('width')
+    
+    for i in range(len(inset_e[:,0,0])):
+        plt.plot(inset_e[i,:,1], inset_e[i,:,2], label = inset_e[i,0,0])
+    plt.xlabel('length')
+    
+    plt.legend(frameon = False)
+    plt.title('Corr barrier with different lengths w.r.t width')
+    plt.ylabel('corr barrier')
+    
     plt.show()
 
+def plot_fromFile():
+    thetas  =       [0,1,2,3,4,5,6,7,8,9,
+                     10, 11,12,13,15,17,
+                     20,24,26,28,
+                     30,32,34,36,
+                     40,43,45,47,48,49,
+                     50,51,52,54,55,56,57,58,59,60]
+    data    =   np.loadtxt('/space/tohekorh/ShearSlide/files/corr_data_%s.txt' %edge)
+    new_dat =   np.zeros((len(data), 2))
+    
+    for i, line in enumerate(data):
+        w,l     =   line[:2]
+        corrs   =   np.array(line[2:])
+        
+        n = 0
+        new_corrs   =   np.zeros(len(corrs) - 9)
+        for j in range(len(corrs)):
+            if j not in [1,3,5,7,9,11,13,15,17]:
+                new_corrs[n]    =   corrs[j]
+                n += 1
+        
+        corrs = new_corrs
+        plt.plot(thetas, corrs)
+        if w not in [3,5]:
+            new_dat[i]  =   [w*l,np.average(corrs)]        
+        
+        
+    plt.show()
+        
+    plt.scatter(new_dat[:,0], new_dat[:,1])
+    plt.xlabel('Area Angst2')
+    plt.ylabel('Average corrugation eV')
+    plt.show()
+        
 #
 
-plot_corr_ribbon()
+plot_fromFile()
+#plot_corr_ribbon()
 #exit()
 #corr_KC()
 #plot_corr([[4,'zz'], [5, 'ac']])

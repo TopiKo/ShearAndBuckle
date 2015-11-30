@@ -4,6 +4,55 @@ Created on 29.9.2015
 @author: tohekorh
 '''
 
+'''
+Created on 29.9.2015
+
+@author: tohekorh
+'''
+
+from study_corrSticking import runAndStudy
+from structure import get_length
+from misc.lammps_help import get_simulParams
+from misc.solvers import get_Ld_quess
+import sys
+
+width, edge, ratio, ncores =  int(sys.argv[1]), sys.argv[2], int(sys.argv[3]), int(sys.argv[4]) 
+
+#width, edge, ratio, ncores   =   7, 'ac', 26, 2
+taito   =   True
+
+
+params_dic          =   get_simulParams(edge)[-1]
+params_dic['taito'] =   taito
+params_dic['ratio'] =   ratio
+params_dic['width'] =   width
+params_dic['ncores']=   ncores
+
+pot_key             =   'KC'
+Ld_apprx            =   get_Ld_quess(width, ratio, edge)
+L_bend              =   get_length(ratio, width, edge)
+
+
+def linear_advancing():
+
+    i       =   1
+    stick   =   False
+    
+    while not stick:
+        
+        L_tail  =   i 
+        print 'Ld = %i' %L_tail
+        print 'L-bend = %i, L-tail = %i' %(L_bend, L_tail)
+        params_dic['Ldilde_i']  =   L_tail   
+        
+        stick   =   runAndStudy(params_dic, pot_key, save = True) #test_f(a_1 + fdir*int_val/2) #
+        if edge == 'ac':    i      +=   1
+        elif edge == 'zz':  i      +=   2
+
+        
+linear_advancing()            
+
+'''
 from study_corrSticking import runAndStudy
 from misc.lammps_help import get_simulParams
 from misc.solvers import get_Ld_quess
@@ -57,6 +106,7 @@ def half_intervalAlg(Ld_apprx):
         
 half_intervalAlg(Ld_apprx)
             
+'''
 '''
 stick       =   False
 i           =   0

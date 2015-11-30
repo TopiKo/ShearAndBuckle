@@ -4,7 +4,7 @@ Created on 17.8.2015
 @author: tohekorh
 '''
 
-from misc.ui import query_yes_no, read_simul_params_file
+from misc.ui import query_yes_no, read_simul_params_file, read_stick_simul_params_file
 #import numpy as np
 import os
 import numpy as np
@@ -57,7 +57,7 @@ def get_datas(ia, T, key):
                                     
     return data
 
-def get_log_data(ia, T, key):
+def get_log_data(ia, T, key, Wis = range(1,20)):
     
     path    =   '/space/tohekorh/ShearSlide/files/%s_%i/%s/' %(ia, T, key) 
     data    =   []
@@ -69,21 +69,57 @@ def get_log_data(ia, T, key):
             print folder
             if query_yes_no('Take this folder?', default="yes"):
                 W   =   int(folder.split('=')[1])
-                for filen in os.listdir(folder):
-                    if filen[-6:] == '.simul':
-                        print filen 
-                        if query_yes_no('Take this file?', default="yes"):
+                if W in Wis:
+                    for filen in os.listdir(folder):
+                        if filen[-6:] == '.simul':
+                            print filen 
+                            if query_yes_no('Take this file?', default="yes"):
+                                fPath   =   folder + '/' + filen
+                                Wval, L, wi, li, v =   read_simul_params_file(fPath)[:5]
+                                
+                                
+                                if wi != W: raise
+                                
+                                logpath =   fPath[:-6] + '.log'
+                                trajpath=   fPath[:-6] + '.traj'
+                                atoms   =   PickleTrajectory(trajpath, 'r')[-1]
+                                natoms  =   len(atoms)
+                                
+                                data.append([wi, li, Wval, L, natoms, v, np.loadtxt(logpath)])
+                            
+    return data
+
+
+def get_stick_data(ia, T, key, wi):
+    
+    path    =   '/space/tohekorh/ShearSlide/files/%s_%i/%s/w=%i' %(ia, T, key, wi) 
+    #path    =   '/home/topi/workspace/ShearAndBuckle/data/stick/w=7/'
+    
+    data    =   []
+    print path
+    for x in os.walk(path):
+        
+        folder = x[0]
+        if folder != path:
+            print folder
+            if query_yes_no('Take this folder?', default="yes"):
+                r   =   int(folder.split('=')[-1]) 
+                if r%10 == 0 or r in [12,14,16,18]:
+                    for filen in os.listdir(folder):
+                        if filen[-6:] == '.simul':
+                            print filen 
                             fPath   =   folder + '/' + filen
-                            Wval, L, wi     =   read_simul_params_file(fPath)[:3]
+                            width_i, length, length_d, temp, _, _, _, _, _, stick  \
+                                =   read_stick_simul_params_file(fPath)
+                            if stick:
+                                print 'stick at L_b/L_t = %.2f' %(length_d/length)
+                                data.append([length, length_d])
                             
+                            if width_i != wi: raise
                             
-                            
-                            if wi != W: raise
-                            
-                            logpath =   fPath[:-6] + '.log'
                             #trajpath=   fPath[:-6] + '.traj'
                             #atoms   =   PickleTrajectory(trajpath, 'r')[-1]
                             
-                            data.append([Wval, L, np.loadtxt(logpath)])
-                            
-    return data
+                        
+                        
+    return np.array(data)

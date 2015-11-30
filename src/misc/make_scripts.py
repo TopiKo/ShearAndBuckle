@@ -5,8 +5,9 @@ Created on 1.10.2015
 '''
 import os
 
-w       =   7
-ratios  =   range(10,40)
+w       =   13
+
+ratios  =   [12] #range(10,40)
 ncores  =   8
 edge    =   'ac'
 
